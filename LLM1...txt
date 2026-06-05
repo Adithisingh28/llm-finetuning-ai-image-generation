@@ -1,0 +1,44 @@
+import torch
+from diffusers import StableDiffusionPipeline
+
+# Check device
+device = "cuda" if torch.cuda.is_available() else "cpu"
+print(f"Using device: {device}")
+
+# Configuration class
+class CFG:
+    seed = 42
+    device = device
+    generator = torch.Generator(device).manual_seed(seed)
+    image_gen_steps = 35
+    image_gen_model_id = "CompVis/stable-diffusion-v1-4"
+    image_gen_size = (400, 400)
+    image_gen_guidance_scale = 9
+
+# Load Stable Diffusion model
+image_gen_model = StableDiffusionPipeline.from_pretrained(
+    CFG.image_gen_model_id,
+    torch_dtype=torch.float16 if device == "cuda" else torch.float32,
+    revision="fp16" if device == "cuda" else None
+)
+
+# Move model to device
+image_gen_model = image_gen_model.to(CFG.device)
+
+# Prompt
+prompt = "a fantasy landscape, beautiful scenery, sunset"
+
+# Generate image
+with torch.no_grad():
+    image = image_gen_model(
+        prompt,
+        guidance_scale=CFG.image_gen_guidance_scale,
+        num_inference_steps=CFG.image_gen_steps,
+        generator=CFG.generator
+    ).images[0]
+
+# Display image
+image.show()
+
+# Optional: Save image
+image.save("generated_image.png")
